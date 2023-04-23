@@ -70,10 +70,10 @@ int16_t main(void)
     EICRA |= (1 << ISC01);
     EIMSK |= (1 << INT0);
 
-    // Enable watchdog, interrupt after 32ms
+    // Enable watchdog, interrupt after 125ms
     wdt_reset();
     WDTCSR |= (1 << WDCE) | (1 << WDE);
-    WDTCSR = (1 << WDIE) | (1 << WDP0);
+    WDTCSR = (1 << WDIE) | (1 << WDP1) | (1 << WDP0);
 
     // Enable interrupts
     sei();
@@ -262,9 +262,8 @@ int16_t main(void)
             // Decode IR NEC Enhaced pulses
             else if ((eeprom[0] & idRC_Mask) == idRC_NEC)
             {
-
-                // Go to half pulse
-                // wait_us(IR_NEC_PULSE / 2);
+                // Clear old code
+                rc = 0;
 
                 // Long leading pulse - return 0b000000000000000011111111 for code
                 // Short leading pulse - return 0b000000000000000011110111 for repeat
@@ -273,21 +272,28 @@ int16_t main(void)
                     // Shift on full pulse
                     rc = rc << 1;
                     rc |= PIND & (1 << 0);
+
+                    // Logic analyzer
+                    if (i == 20)
+                    {
+                        LOGIC_PORT ^= LOGIC_IO;
+                        LOGIC_PORT ^= LOGIC_IO;
+                    }
                     if (i == 15)
                     {
                         // Pulse rising edge sync
                         while (!(PIND & (1 << 0)) && infrared == 1)
                             LOGIC_PORT ^= LOGIC_IO;
-                        LOGIC_PORT |= LOGIC_IO;
+                        LOGIC_PORT &= ~LOGIC_IO;
+
                         // Go to half pulse
                         wait_us((IR_NEC_PULSE / 2));
+
+                        // Logic analyzer
+                        LOGIC_PORT |= LOGIC_IO;
                     }
                     else
-                    {
-                        LOGIC_PORT &= ~LOGIC_IO;
-                        LOGIC_PORT |= LOGIC_IO;
                         wait_us(IR_NEC_PULSE);
-                    }
                 }
 
                 // Long leading pulse - code
@@ -302,10 +308,12 @@ int16_t main(void)
                         // Pulse rising edge sync
                         while (!(PIND & (1 << 0)) && infrared == 1)
                             LOGIC_PORT ^= LOGIC_IO;
-                        LOGIC_PORT |= LOGIC_IO;
+                        LOGIC_PORT &= ~LOGIC_IO;
                         wait_us(IR_NEC_PULSE * 1.5);
                         rc = rc << 1;
                         rc |= PIND & (1 << 0);
+                        // Logic analyzer
+                        LOGIC_PORT |= LOGIC_IO;
                         if (rc & 1)
                             wait_us(IR_NEC_PULSE * 2);
                     }
@@ -337,19 +345,19 @@ int16_t main(void)
             // Bit mask for RC6 - leader, mode * 3, trailer, control * 8 information * 8, (ignore toggle)
             else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[1])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[1]))
                 hid = HID_PLAY;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[2])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[2]))
+            else if (rc == eeprom[2] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[2])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[2]))
                 hid = HID_PAUSE;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[3])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[3]))
+            else if (rc == eeprom[3] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[3])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[3]))
                 hid = HID_NEXT;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[4])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[4]))
+            else if (rc == eeprom[4] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[4])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[4]))
                 hid = HID_PREV;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[5])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[5]))
+            else if (rc == eeprom[5] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[5])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[5]))
                 hid = HID_STOP;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[6])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[6]))
+            else if (rc == eeprom[6] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[6])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[6]))
                 hid = HID_PLPAUSE;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[7])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[7]))
+            else if (rc == eeprom[7] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[7])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[7]))
                 hid = HID_BRIGHT_INC;
-            else if (rc == eeprom[1] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[8])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[8]))
+            else if (rc == eeprom[8] || (((eeprom[0] & idRC_Mask) == idRC_RC5 && (rc & 0b000001100001111101111111) == eeprom[8])) || ((eeprom[0] & idRC_Mask) == idRC_RC6 && (rc & 0b001111101111111111111111) == eeprom[8]))
                 hid = HID_BRIGHT_DEC;
             else
                 hid = 0;

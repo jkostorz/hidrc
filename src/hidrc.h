@@ -20,24 +20,24 @@
     #define HIDRC
 
     // Config output for led
-    #define LED_DDRB        DDRB
-    #define LED_PORT        PORTB
-    #define LED_IO          (1 << 0)
+    #define LED_DDRB            DDRB
+    #define LED_PORT            PORTB
+    #define LED_IO              (1 << 0)
 
     // Config output for debugging
-    #define LOGIC_DDRB      DDRB
-    #define LOGIC_PORT      PORTB
-    #define LOGIC_IO        (1 << 2)
+    #define LOGIC_DDRB          DDRB
+    #define LOGIC_PORT          PORTB
+    #define LOGIC_IO            (1 << 2)
 
     // id
-    #define idVendor                0x16d0      // MCS Electronics
-    #define idProduct               0x1241      // HID Device - Janusz Kostorz !!! please don't use this id in forks !!!
-    #define idData                  0x16d01241  // EEPROM id
-    #define idRC_Mask               0b00000000000011110000000000000000
-    #define idRC_NEC                0b00000000000000010000000000000000
-    #define idRC_RC5                0b00000000000001010000000000000000
-    #define idRC_RC6                0b00000000000001110000000000000000
-    #define idRC_SIRC               0b00000000000010000000000000000000
+    #define idVendor            0x16d0      // MCS Electronics
+    #define idProduct           0x1241      // HID Device - Janusz Kostorz !!! please don't use this id in forks !!!
+    #define idData              0x16d01241  // EEPROM id
+    #define idRC_Mask           0b00000000000011110000000000000000
+    #define idRC_NEC            0b00000000000000010000000000000000
+    #define idRC_RC5            0b00000000000001010000000000000000
+    #define idRC_RC6            0b00000000000001110000000000000000
+    #define idRC_SIRC           0b00000000000010000000000000000000
 
     // IR NEC standard - LSB to MSB - Addr Lo + Addr Hi + Cmd + Neg Cmd
     #define IR_NEC_PULSE        560         // IR NEC pulse time (us)
