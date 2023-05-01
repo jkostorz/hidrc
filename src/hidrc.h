@@ -50,6 +50,9 @@
     // IR RC6 standard
     #define IR_RC6_PULSE        444         // IR RC6 pulse time (us)
 
+    // IR SIRC standard
+    #define IR_SIRC_PULSE       600         // IR SIRC pulse time (us)
+
     // Remote control - ONKYO RC-645S
     #ifdef ONKYO_RC645S
         #define idRC            idRC_NEC
@@ -113,6 +116,19 @@
         #define RC_PLPAUSE      0x0030005c
         #define RC_BRIGHT_INC   0x00300058
         #define RC_BRIGHT_DEC   0x00300059
+    #endif
+
+    // SIRC test
+    #ifdef idRC_TESTS
+        #define idRC            idRC_SIRC
+        #define RC_PLAY         0xffffffff
+        #define RC_PAUSE        0xffffffff
+        #define RC_NEXT         0x0000038e
+        #define RC_PREV         0x0000038c
+        #define RC_STOP         0xffffffff
+        #define RC_PLPAUSE      0x000001a5
+        #define RC_BRIGHT_INC   0x0000038d
+        #define RC_BRIGHT_DEC   0x0000038f
     #endif
 
     // No remote control define
@@ -300,8 +316,8 @@
         '3', 0x00,
         '0', 0x00,
         '4', 0x00,
-        '1', 0x00,
-        '9', 0x00,
+        '3', 0x00,
+        '0', 0x00,
     };
 
     uint32_t ee_read_l(uint8_t addr);

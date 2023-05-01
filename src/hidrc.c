@@ -70,6 +70,13 @@ int16_t main(void)
     EICRA |= (1 << ISC01);
     EIMSK |= (1 << INT0);
 
+    // Enable serial port 115200 8n1
+    UBRR1H |= 0;
+    UBRR1L |= 16;
+    UCSR1A |= (1 << U2X1);
+    UCSR1B |= (1 << TXEN1);
+    UCSR1C |= (1 << UCSZ10) | (1 << UCSZ11);
+
     // Enable watchdog, interrupt after 125ms
     wdt_reset();
     WDTCSR |= (1 << WDCE) | (1 << WDE);
@@ -338,6 +345,56 @@ int16_t main(void)
                     rc = 0;
             }
 
+            // Decode IR SIRC 7 + 5 and 7 + 8 pulses
+            else if ((eeprom[0] & idRC_Mask) == idRC_SIRC)
+            {
+                // Clear old code
+                rc = 0;
+
+                // Longer start bit
+                wait_us(IR_SIRC_PULSE * 3.5);
+
+                // Decode pulses
+                for (uint8_t i = 0; i < 16 && infrared == 1; i++)
+                {
+                    // Shift command
+                    if (i == 7)
+                        rc = rc << 1;
+
+                    // Check for "0" or "1"
+                    rc = rc << 1;
+                    rc |= ~PIND & (1 << 0);
+
+                    // Pulse rising edge sync
+                    while (!(PIND & (1 << 0)) && infrared == 1)
+                        LOGIC_PORT ^= LOGIC_IO;
+                    LOGIC_PORT |= LOGIC_IO;
+
+                    // Wait for next pulse
+                    if (rc & 1)
+                        wait_us(IR_SIRC_PULSE * 2.5);
+                    else
+                        wait_us(IR_SIRC_PULSE * 2);
+                }
+
+                // Check complete code and convert lsb to msb
+                if (rc & 0b00000000000000010000000000000000)
+                {
+                    rc = ((rc & 0x0000aaaa) >> 1) | ((rc & 0x00005555) << 1);
+                    rc = ((rc & 0x0000cccc) >> 2) | ((rc & 0x00003333) << 2);
+                    rc = ((rc & 0x0000f0f0) >> 4) | ((rc & 0x00000f0f) << 4);
+                    rc = ((rc & 0x0000ff00) >> 8) | ((rc & 0x000000ff) << 8);
+                }
+                else
+                    rc = 0;
+
+                // Slowdown repeat other than this commands
+                if (hid != HID_BRIGHT_INC && hid != HID_BRIGHT_DEC)
+                    wait_ms(270);
+                else
+                    wait_ms(135);
+            }
+
             // Repeat for NEC
             if ((eeprom[0] & idRC_Mask) == idRC_NEC && rc == 0b000000000000000011110111)
                 ;
@@ -398,6 +455,31 @@ int16_t main(void)
                 // Led off, logic 1
                 LOGIC_PORT ^= LOGIC_IO;
                 LED_PORT |= LED_IO;
+            }
+
+            // Send remote control code over serial port
+            if (rc)
+            {
+                while (!(UCSR1A & (1 << UDRE1)))
+                    ;
+                UDR1 = 0x30;
+                while (!(UCSR1A & (1 << UDRE1)))
+                    ;
+                UDR1 = 0x78;
+                for (uint8_t i = 0; i < 8; i++)
+                {
+                    while (!(UCSR1A & (1 << UDRE1)))
+                        ;
+                    uint8_t j = (uint32_t)(rc >> ((7 - i) * 4)) & 0x0f;
+                    if (j < 10)
+                        j += 0x30;
+                    else
+                        j += 0x57;
+                    UDR1 = j;
+                }
+                while (!(UCSR1A & (1 << UDRE1)))
+                    ;
+                UDR1 = 0x0a;
             }
 
             // Accept next infrared pulses
